@@ -28,12 +28,15 @@ A command-line tool to get current weather and multi-day forecasts by airport co
     Show weather for all favorite airports
 
 ./weather.py --add-favorite <CODE>
+./weather.py -af <CODE>
     Add an airport code to your favorites
 
 ./weather.py --remove-favorite <CODE>
+./weather.py -rf <CODE>
     Remove an airport code from your favorites
 
 ./weather.py --list-favorites
+./weather.py -lf
     List your favorite airports
 
 ./weather.py --list-airports, -l
@@ -70,4 +73,7 @@ pip install requests wcwidth
 - Temperature unit can be set in `config.json` ("unit": "C" or "F") or overridden with `--unit`.
 - Use `--debug` to enable debug output for troubleshooting.
 - `-wf` is a shorthand for `--weather-favorites`.
+- `-af` is a shorthand for `--add-favorite`.
+- `-rf` is a shorthand for `--remove-favorite`.
+- `-lf` is a shorthand for `--list-favorites`.
 - If you're using a virtualenv, activate it before running the CLI (e.g. `source .venv/bin/activate`).

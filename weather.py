@@ -29,12 +29,15 @@ Usage:
       Show weather for all favorite airports
 
   ./weather.py --add-favorite <CODE>
+  ./weather.py -af <CODE>
       Add an airport code to your favorites
 
   ./weather.py --remove-favorite <CODE>
+  ./weather.py -rf <CODE>
       Remove an airport code from your favorites
 
   ./weather.py --list-favorites
+  ./weather.py -lf
       List your favorite airports
 
   ./weather.py --list-airports, -l
@@ -561,9 +564,9 @@ def main():
     parser.add_argument("--unit", choices=["C", "F", "c", "f"], help="Temperature unit")
     parser.add_argument("--debug", action="store_true", help="Enable debug output")
     parser.add_argument("--weather-favorites", "-wf", action="store_true", help="Weather for favorites")
-    parser.add_argument("--add-favorite", metavar="CODE", help="Add favorite airport code")
-    parser.add_argument("--remove-favorite", metavar="CODE", help="Remove favorite airport code")
-    parser.add_argument("--list-favorites", action="store_true", help="List favorite airports")
+    parser.add_argument("--add-favorite", "-af", metavar="CODE", help="Add favorite airport code")
+    parser.add_argument("--remove-favorite", "-rf", metavar="CODE", help="Remove favorite airport code")
+    parser.add_argument("--list-favorites", "-lf", action="store_true", help="List favorite airports")
     parser.add_argument("--list-airports", "-l", action="store_true", help="List all airports")
     parser.add_argument("--search", "-s", metavar="QUERY", help="Search airports")
     parser.add_argument("--add-airport", "-a", action="store_true", help="Add a custom airport")
