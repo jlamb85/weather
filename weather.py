@@ -49,9 +49,6 @@ Usage:
   ./weather.py --add-airport, -a
       Add a custom airport to airports.json
 
-  ./weather.py --update-airports
-      Update airports.json with current global airport data
-
   ./weather.py --help, -h
       Show help message
 """
@@ -635,10 +632,66 @@ def list_favorites():
             print(f"  {code}")
 
 
+def list_airports():
+    # Stub: list all airports
+    airports = load_airports()
+    if not airports:
+        print("No airports available.")
+    else:
+        print("Available airports:")
+        for code, entry in sorted(airports.items()):
+            name = entry.get("name", "")
+            city = entry.get("city", "")
+            iso_region = entry.get("iso_region", "")
+            iso_country = entry.get("iso_country", "")
+            region_str = ", ".join([v for v in [iso_region, iso_country] if v])
+            suffix = f" ({city})" if city else ""
+            if region_str:
+                suffix = f"{suffix} [{region_str}]"
+            print(f"  {code}: {name}{suffix}")
+
+
+def search_airports(query):
+    # Stub: search airports by code, name, or city
+    airports = load_airports()
+    query = query.lower()
+    found = False
+    for code, entry in airports.items():
+        name = entry.get("name", "")
+        city = entry.get("city", "")
+        iso_country = entry.get("iso_country", "")
+        iso_region = entry.get("iso_region", "")
+        airport_type = entry.get("type", "")
+        scheduled_service = entry.get("scheduled_service", "")
+        local_code = entry.get("local_code", "")
+        gps_code = entry.get("gps_code", "")
+        faa_lid = entry.get("faa_lid", "")
+        haystack = " ".join([
+            code,
+            name,
+            city,
+            iso_country,
+            iso_region,
+            airport_type,
+            scheduled_service,
+            local_code,
+            gps_code,
+            faa_lid,
+        ]).lower()
+        if query in haystack:
+            region_str = ", ".join([v for v in [iso_region, iso_country] if v])
+            suffix = f" ({city})" if city else ""
+            if region_str:
+                suffix = f"{suffix} [{region_str}]"
+            print(f"  {code}: {name}{suffix}")
+            found = True
+    if not found:
+        print("No airports found matching query.")
+
+
 def update_airports():
     """
     Download and update airports.json from OurAirports open data.
-    Only includes airports with valid ICAO or IATA code, name, city, lat, lon.
     """
     import csv
     import ssl
@@ -680,7 +733,6 @@ def update_airports():
                 elevation_ft = int(float(elevation_ft)) if elevation_ft not in (None, "") else None
             except (TypeError, ValueError):
                 elevation_ft = None
-            # Always add both ICAO and IATA codes as separate keys if both exist
             if icao:
                 airports[icao] = {
                     "name": name,
@@ -753,63 +805,6 @@ def update_airports():
         print(f"Updated airports.json with {len(airports)} airports.")
     except Exception as e:
         print(f"Failed to update airports: {e}")
-
-
-def list_airports():
-    # Stub: list all airports
-    airports = load_airports()
-    if not airports:
-        print("No airports available.")
-    else:
-        print("Available airports:")
-        for code, entry in sorted(airports.items()):
-            name = entry.get("name", "")
-            city = entry.get("city", "")
-            iso_region = entry.get("iso_region", "")
-            iso_country = entry.get("iso_country", "")
-            region_str = ", ".join([v for v in [iso_region, iso_country] if v])
-            suffix = f" ({city})" if city else ""
-            if region_str:
-                suffix = f"{suffix} [{region_str}]"
-            print(f"  {code}: {name}{suffix}")
-
-
-def search_airports(query):
-    # Stub: search airports by code, name, or city
-    airports = load_airports()
-    query = query.lower()
-    found = False
-    for code, entry in airports.items():
-        name = entry.get("name", "")
-        city = entry.get("city", "")
-        iso_country = entry.get("iso_country", "")
-        iso_region = entry.get("iso_region", "")
-        airport_type = entry.get("type", "")
-        scheduled_service = entry.get("scheduled_service", "")
-        local_code = entry.get("local_code", "")
-        gps_code = entry.get("gps_code", "")
-        faa_lid = entry.get("faa_lid", "")
-        haystack = " ".join([
-            code,
-            name,
-            city,
-            iso_country,
-            iso_region,
-            airport_type,
-            scheduled_service,
-            local_code,
-            gps_code,
-            faa_lid,
-        ]).lower()
-        if query in haystack:
-            region_str = ", ".join([v for v in [iso_region, iso_country] if v])
-            suffix = f" ({city})" if city else ""
-            if region_str:
-                suffix = f"{suffix} [{region_str}]"
-            print(f"  {code}: {name}{suffix}")
-            found = True
-    if not found:
-        print("No airports found matching query.")
 
 
 def main():
