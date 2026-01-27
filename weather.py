@@ -73,8 +73,14 @@ except ImportError:
 
 
 # Config file support for default unit
+def get_app_dir():
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(__file__)
+
+
 def get_config_path():
-    return os.path.join(os.path.dirname(__file__), 'config.json')
+    return os.path.join(get_app_dir(), 'config.json')
 
 
 def load_config():
@@ -86,6 +92,25 @@ def load_config():
         except Exception as e:
             print(f"Warning: Could not load config.json: {e}")
     return {}
+
+
+def setup_default_config():
+    path = get_config_path()
+    if os.path.exists(path):
+        print(f"config.json already exists at {path}")
+        return
+    template_path = os.path.join(get_app_dir(), "config.default.json")
+    if not os.path.exists(template_path):
+        print(f"Error: Missing config.default.json at {template_path}")
+        return
+    try:
+        with open(template_path, "r") as src:
+            data = json.load(src)
+        with open(path, "w") as dst:
+            json.dump(data, dst, indent=2)
+        print(f"Created default config.json at {path}")
+    except Exception as e:
+        print(f"Error: Could not create config.json: {e}")
 
 
 # Utility to write output to both console and a file
@@ -140,7 +165,7 @@ def weather_for_favorites(show_forecast=False, debug=False, days=7, temp_unit_ov
 
 # Load airports from airports.json in the project directory
 def get_airports_path():
-    return os.path.join(os.path.dirname(__file__), 'airports.json')
+    return os.path.join(get_app_dir(), 'airports.json')
 
 
 def load_airports():
@@ -441,7 +466,7 @@ def add_custom_airport():
 
 def load_favorites():
     # Stub: load favorites from favorites.json
-    path = os.path.join(os.path.dirname(__file__), 'favorites.json')
+    path = os.path.join(get_app_dir(), 'favorites.json')
     if os.path.exists(path):
         try:
             with open(path, 'r') as f:
@@ -457,7 +482,7 @@ def add_favorite(code):
     code = code.upper()
     if code not in favorites:
         favorites.append(code)
-        path = os.path.join(os.path.dirname(__file__), 'favorites.json')
+        path = os.path.join(get_app_dir(), 'favorites.json')
         with open(path, 'w') as f:
             json.dump(favorites, f, indent=2)
         print(f"Added {code} to favorites.")
@@ -471,7 +496,7 @@ def remove_favorite(code):
     code = code.upper()
     if code in favorites:
         favorites.remove(code)
-        path = os.path.join(os.path.dirname(__file__), 'favorites.json')
+        path = os.path.join(get_app_dir(), 'favorites.json')
         with open(path, 'w') as f:
             json.dump(favorites, f, indent=2)
         print(f"Removed {code} from favorites.")
@@ -571,6 +596,7 @@ def main():
     parser.add_argument("--search", "-s", metavar="QUERY", help="Search airports")
     parser.add_argument("--add-airport", "-a", action="store_true", help="Add a custom airport")
     parser.add_argument("--update-airports", action="store_true", help="Update airports database")
+    parser.add_argument("--setup", action="store_true", help="Create a default config.json")
     parser.add_argument("--help", "-h", action="store_true", help="Show help message")
 
     args = parser.parse_args()
@@ -615,6 +641,9 @@ Usage:
 
   ./weather.py --update-airports
       Update airports.json with current global airport data
+
+  ./weather.py --setup
+      Create a default config.json next to the executable
 """)
         return
 
@@ -627,7 +656,7 @@ Usage:
     tee = None
     try:
         if debug:
-            tee = Tee(os.path.join(os.path.dirname(__file__), "weather_output.txt"))
+            tee = Tee(os.path.join(get_app_dir(), "weather_output.txt"))
 
         if args.weather_favorites:
             weather_for_favorites(
@@ -651,6 +680,9 @@ Usage:
             return
         if args.list_airports:
             list_airports()
+            return
+        if args.setup:
+            setup_default_config()
             return
         if args.search:
             search_airports(args.search)
