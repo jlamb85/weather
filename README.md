@@ -6,6 +6,8 @@ A command-line tool to get current weather and multi-day forecasts by airport co
 - Get current weather for any supported airport by ICAO or IATA code
 - 7-day (or custom N-day) forecast with `--forecast`/`-f` and `--days N`
 - Table output with emoji and aligned columns
+- Current conditions include humidity, dew point, apparent temperature, wind gusts, pressure, cloud cover, precipitation, visibility, and UV index
+- `--no-emoji` disables emoji in output if your terminal font doesn’t align them well
 - List, add, and remove favorite airports
 - Batch weather for all favorites with `--weather-favorites` or `-wf`
 - Add custom airports to your local database
@@ -50,6 +52,9 @@ A command-line tool to get current weather and multi-day forecasts by airport co
 
 ./weather.py --update-airports
     Update airports.json with current global airport data
+
+./weather.py --no-emoji
+    Disable emoji in weather output
 
 ./weather.py --setup
     Create a default config.json next to the executable
@@ -140,4 +145,5 @@ pip install requests wcwidth
 - `-rf` is a shorthand for `--remove-favorite`.
 - `-lf` is a shorthand for `--list-favorites`.
 - Run `--setup` once on a fresh install to create `config.json` beside the executable.
+- For best alignment with emoji output, use a monospace font with good emoji rendering (e.g., SF Mono, Menlo, or Noto Sans Mono). If alignment looks off, use `--no-emoji`.
 - If you're using a virtualenv, activate it before running the CLI (e.g. `source .venv/bin/activate`).

@@ -168,7 +168,7 @@ REQUEST_TIMEOUT = 10
 
 
 # Fetch weather for all favorites
-def weather_for_favorites(show_forecast=False, debug=False, days=7, temp_unit_override=None):
+def weather_for_favorites(show_forecast=False, debug=False, days=7, temp_unit_override=None, no_emoji=False):
     favorites = load_favorites()
     airports = load_airports()
     if not favorites:
@@ -188,6 +188,7 @@ def weather_for_favorites(show_forecast=False, debug=False, days=7, temp_unit_ov
                 days=days,
                 temp_unit_override=temp_unit_override,
                 airports=airports,
+                no_emoji=no_emoji,
             )
         else:
             print(f"{code}: (not found in airports.json)")
@@ -290,27 +291,27 @@ def save_airports(airports):
         json.dump(data, f, indent=2)
 
 
-def weather_code_to_emoji(code):
+def weather_code_to_emoji(code, with_emoji=True):
     # Open-Meteo weather codes: https://open-meteo.com/en/docs#api_form
     try:
         code = int(code)
     except (TypeError, ValueError):
-        return "❓ Unknown"
+        return "❓ Unknown" if with_emoji else "Unknown"
     if code == 0:
-        return "☀️ Clear"
+        return "☀️ Clear" if with_emoji else "Clear"
     elif code in (1, 2, 3):
-        return "⛅ Partly Cloudy"
+        return "⛅ Partly Cloudy" if with_emoji else "Partly Cloudy"
     elif code in (45, 48):
-        return "🌫️ Fog"
+        return "🌫️ Fog" if with_emoji else "Fog"
     elif code in (51, 53, 55, 56, 57):
-        return "🌦️ Drizzle"
+        return "🌦️ Drizzle" if with_emoji else "Drizzle"
     elif code in (61, 63, 65, 66, 67, 80, 81, 82):
-        return "🌧️ Rain"
+        return "🌧️ Rain" if with_emoji else "Rain"
     elif code in (71, 73, 75, 77, 85, 86):
-        return "❄️ Snow"
+        return "❄️ Snow" if with_emoji else "Snow"
     elif code in (95, 96, 99):
-        return "⛈️ Thunderstorm"
-    return "❓ Unknown"
+        return "⛈️ Thunderstorm" if with_emoji else "Thunderstorm"
+    return "❓ Unknown" if with_emoji else "Unknown"
 
 
 def get_weather_by_airport(
@@ -320,6 +321,7 @@ def get_weather_by_airport(
     days=7,
     temp_unit_override=None,
     airports=None,
+    no_emoji=False,
 ):
     if debug:
         print(f"DEBUG: get_weather_by_airport({airport_code}, show_forecast={show_forecast}, days={days})")
@@ -342,9 +344,28 @@ def get_weather_by_airport(
     lat = airport.get("lat", 0)
     lon = airport.get("lon", 0)
     # For now, only open-meteo is implemented for live data
+    current_vars = ",".join([
+        "temperature_2m",
+        "relative_humidity_2m",
+        "dew_point_2m",
+        "apparent_temperature",
+        "precipitation",
+        "rain",
+        "showers",
+        "snowfall",
+        "weather_code",
+        "cloud_cover",
+        "visibility",
+        "uv_index",
+        "pressure_msl",
+        "surface_pressure",
+        "wind_speed_10m",
+        "wind_direction_10m",
+        "wind_gusts_10m",
+    ])
     url = (
         f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}"
-        f"&current_weather=true&temperature_unit={temp_param}&windspeed_unit=kn"
+        f"&current={current_vars}&temperature_unit={temp_param}&wind_speed_unit=kn"
         f"&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum,sunrise,sunset&forecast_days={days}&timezone=auto"
     )
     if debug:
@@ -368,7 +389,8 @@ def get_weather_by_airport(
     if resp.status_code != 200:
         print(f"Error: Could not fetch weather for {airport_code} (status {resp.status_code})")
         return
-    current = data.get("current_weather", {})
+    current = data.get("current", {}) or data.get("current_weather", {})
+    current_units = data.get("current_units", {}) or data.get("current_weather_units", {})
     print("\n" + "=" * 40)
     print(f"Weather for {airport_code.upper()} - {name} ({city})")
     icao_code = airport.get("icao_code", "")
@@ -409,10 +431,18 @@ def get_weather_by_airport(
         except Exception:
             pass
     if current:
-        print(f"Current:  {weather_code_to_emoji(current.get('weathercode', -1))}")
-        print(f"  Temp:    {current.get('temperature', 'N/A')}{temp_symbol}")
-        wind_dir = current.get('winddirection', 'N/A')
-        wind_speed_kt = current.get('windspeed', 'N/A')
+        weather_code = current.get("weather_code", current.get("weathercode", -1))
+        print(f"Current:  {weather_code_to_emoji(weather_code, with_emoji=not no_emoji)}")
+        temp_val = current.get("temperature_2m", current.get("temperature", "N/A"))
+        print(f"  Temp:    {temp_val}{temp_symbol}")
+        apparent = current.get("apparent_temperature", "N/A")
+        humidity = current.get("relative_humidity_2m", "N/A")
+        dew_point = current.get("dew_point_2m", "N/A")
+        print(f"  Feels:   {apparent}{temp_symbol}")
+        print(f"  Humid:   {humidity}{current_units.get('relative_humidity_2m', '%')}")
+        print(f"  DewPt:   {dew_point}{temp_symbol}")
+        wind_dir = current.get('wind_direction_10m', current.get('winddirection', 'N/A'))
+        wind_speed_kt = current.get('wind_speed_10m', current.get('windspeed', 'N/A'))
         wind_speed_str = f"{wind_speed_kt} kt"
         # Convert knots to mph if temp_unit is F (imperial)
         try:
@@ -423,7 +453,22 @@ def get_weather_by_airport(
             wind_speed_mph_str = None
         if temp_unit == 'F' and wind_speed_mph_str:
             wind_speed_str += f" / {wind_speed_mph_str}"
-        print(f"  Wind:    {wind_dir}° at {wind_speed_str}")
+        wind_gusts = current.get("wind_gusts_10m", "N/A")
+        print(f"  Wind:    {wind_dir}° at {wind_speed_str} (gusts {wind_gusts} kt)")
+        pressure_msl = current.get("pressure_msl", "N/A")
+        surface_pressure = current.get("surface_pressure", "N/A")
+        cloud_cover = current.get("cloud_cover", "N/A")
+        visibility = current.get("visibility", "N/A")
+        uv_index = current.get("uv_index", "N/A")
+        precipitation = current.get("precipitation", "N/A")
+        rain = current.get("rain", "N/A")
+        showers = current.get("showers", "N/A")
+        snowfall = current.get("snowfall", "N/A")
+        print(f"  Cloud:   {cloud_cover}{current_units.get('cloud_cover', '%')}")
+        print(f"  Vis:     {visibility}{current_units.get('visibility', 'm')}")
+        print(f"  UV:      {uv_index}{current_units.get('uv_index', '')}")
+        print(f"  Press:   {pressure_msl} {current_units.get('pressure_msl', 'hPa')} (surface {surface_pressure} {current_units.get('surface_pressure', 'hPa')})")
+        print(f"  Precip:  {precipitation}{current_units.get('precipitation', 'mm')} (rain {rain}, showers {showers}, snow {snowfall})")
         print(f"  Time:    {current.get('time', 'N/A')}")
         if sunrise and sunset:
             print(f"  Sunrise: {sunrise}  Sunset: {sunset}")
@@ -441,7 +486,8 @@ def get_weather_by_airport(
         print(f"\n{min(days, len(forecast_days))}-Day Forecast:")
         print("-" * 80)
         # Calculate max display width for all columns for perfect alignment
-        weather_strs = []
+        weather_icons = []
+        weather_descs = []
         date_strs = []
         tmax_strs = []
         tmin_strs = []
@@ -455,7 +501,7 @@ def get_weather_by_airport(
         pad_sun = 8
         n = min(days, len(forecast_days))
         for i in range(n):
-            weather_str = weather_code_to_emoji(wcode[i])
+            weather_str = weather_code_to_emoji(wcode[i], with_emoji=not no_emoji)
             parts = weather_str.split()
             if len(parts) > 1:
                 icon = parts[0]
@@ -479,7 +525,12 @@ def get_weather_by_airport(
                     weather_str = desc
                 else:
                     weather_str = f"{icon} {desc}"
-            weather_strs.append(weather_str)
+            icon = ""
+            desc = weather_str
+            if " " in weather_str:
+                icon, desc = weather_str.split(" ", 1)
+            weather_icons.append(icon)
+            weather_descs.append(desc)
             date_strs.append(str(forecast_days[i]))
             tmax_strs.append(f"{tmax[i]}{temp_symbol}")
             tmin_strs.append(f"{tmin[i]}{temp_symbol}")
@@ -488,64 +539,69 @@ def get_weather_by_airport(
             ss = sunsets[i][-5:] if i < len(sunsets) and sunsets[i] else ''
             sunrise_strs.append(sr)
             sunset_strs.append(ss)
-        # Find max display width for each column (Weather uses wcswidth for display width)
-        max_weather_width = max([wcswidth(ws) for ws in weather_strs] + [pad_weather])
-        max_date_width = max([wcswidth(ds) for ds in date_strs] + [pad_date])
-        max_tmax_width = max([wcswidth(ts) for ts in tmax_strs] + [pad_temp])
-        max_tmin_width = max([wcswidth(ts) for ts in tmin_strs] + [pad_temp])
-        max_precip_width = max([wcswidth(ps) for ps in precip_strs] + [pad_precip])
-        max_sunrise_width = max([wcswidth(s) for s in sunrise_strs] + [pad_sun])
-        max_sunset_width = max([wcswidth(s) for s in sunset_strs] + [pad_sun])
+        def display_width(text):
+            width = wcswidth(text)
+            if width < 0:
+                width = len(text)
+            return width
+
+        max_icon_width = 6
+        max_desc_width = max([display_width(d) for d in weather_descs] + [display_width("Weather"), pad_weather])
+        max_date_width = max([display_width(ds) for ds in date_strs] + [pad_date, display_width("Date")])
+        max_tmax_width = max([display_width(ts) for ts in tmax_strs] + [pad_temp, display_width("High")])
+        max_tmin_width = max([display_width(ts) for ts in tmin_strs] + [pad_temp, display_width("Low")])
+        max_precip_width = max([display_width(ps) for ps in precip_strs] + [pad_precip, display_width("Precip")])
+        max_sunrise_width = max([display_width(s) for s in sunrise_strs] + [pad_sun, display_width("Sunrise")])
+        max_sunset_width = max([display_width(s) for s in sunset_strs] + [pad_sun, display_width("Sunset")])
         # Print header
-        print(
-            f"{'Date':<{max_date_width}} {'Weather':<{max_weather_width}} {'High':>{max_tmax_width}} {'Low':>{max_tmin_width}} {'Precip':>{max_precip_width}} {'Sunrise':>{max_sunrise_width}} {'Sunset':>{max_sunset_width}}")
-        print("-" * (
-                    max_date_width + max_weather_width + max_tmax_width + max_tmin_width + max_precip_width + max_sunrise_width + max_sunset_width + 6))
+        if no_emoji:
+            print(
+                f"{'Date':<{max_date_width}} {'Weather':<{max_desc_width}} {'High':>{max_tmax_width}} {'Low':>{max_tmin_width}} {'Precip':>{max_precip_width}} {'Sunrise':>{max_sunrise_width}} {'Sunset':>{max_sunset_width}}")
+            print("-" * (
+                        max_date_width + max_desc_width + max_tmax_width + max_tmin_width + max_precip_width + max_sunrise_width + max_sunset_width + 6))
+        else:
+            print(
+                f"{'Date':<{max_date_width}} {'Wx':<{max_icon_width}} {'Weather':<{max_desc_width}} {'High':>{max_tmax_width}} {'Low':>{max_tmin_width}} {'Precip':>{max_precip_width}} {'Sunrise':>{max_sunrise_width}} {'Sunset':>{max_sunset_width}}")
+            print("-" * (
+                        max_date_width + max_icon_width + max_desc_width + max_tmax_width + max_tmin_width + max_precip_width + max_sunrise_width + max_sunset_width + 7))
         # Print rows
         for i in range(n):
-            ws = weather_strs[i]
+            icon = weather_icons[i] or ""
+            desc = weather_descs[i] or ""
             ds = date_strs[i]
             tmaxs = tmax_strs[i]
             tmins = tmin_strs[i]
             precs = precip_strs[i]
             srs = sunrise_strs[i]
             sss = sunset_strs[i]
-            # Pad/truncate Weather column using wcswidth, left-align (revert)
-            ws_disp = wcswidth(ws)
-            if ws_disp < max_weather_width:
-                ws = ws + ' ' * (max_weather_width - ws_disp)
-            elif ws_disp > max_weather_width:
-                parts = ws.split()
-                if len(parts) > 1:
-                    icon = parts[0]
-                    desc = ' '.join(parts[1:])
-                    max_desc = max(1, max_weather_width - wcswidth(icon) - 1)
-                    desc = desc[:max_desc]
-                    ws = f"{icon} {desc}"
-                    ws_disp = wcswidth(ws)
-                    if ws_disp < max_weather_width:
-                        ws = ws + ' ' * (max_weather_width - ws_disp)
-                else:
-                    ws = ws[:max_weather_width]
-            ds_disp = wcswidth(ds)
+            icon_disp = display_width(icon)
+            if icon_disp < max_icon_width:
+                icon = icon + ' ' * (max_icon_width - icon_disp)
+            desc_disp = display_width(desc)
+            if desc_disp < max_desc_width:
+                desc = desc + ' ' * (max_desc_width - desc_disp)
+            ds_disp = display_width(ds)
             if ds_disp < max_date_width:
                 ds = ds + ' ' * (max_date_width - ds_disp)
-            tmax_disp = wcswidth(tmaxs)
+            tmax_disp = display_width(tmaxs)
             if tmax_disp < max_tmax_width:
                 tmaxs = ' ' * (max_tmax_width - tmax_disp) + tmaxs
-            tmin_disp = wcswidth(tmins)
+            tmin_disp = display_width(tmins)
             if tmin_disp < max_tmin_width:
                 tmins = ' ' * (max_tmin_width - tmin_disp) + tmins
-            prec_disp = wcswidth(precs)
+            prec_disp = display_width(precs)
             if prec_disp < max_precip_width:
                 precs = ' ' * (max_precip_width - prec_disp) + precs
-            srs_disp = wcswidth(srs)
+            srs_disp = display_width(srs)
             if srs_disp < max_sunrise_width:
                 srs = ' ' * (max_sunrise_width - srs_disp) + srs
-            sss_disp = wcswidth(sss)
+            sss_disp = display_width(sss)
             if sss_disp < max_sunset_width:
                 sss = ' ' * (max_sunset_width - sss_disp) + sss
-            print(f"{ds} {ws} {tmaxs} {tmins} {precs} {srs} {sss}")
+            if no_emoji:
+                print(f"{ds} {desc} {tmaxs} {tmins} {precs} {srs} {sss}")
+            else:
+                print(f"{ds} {icon} {desc} {tmaxs} {tmins} {precs} {srs} {sss}")
     print("=" * 40 + "\n")
 
 
@@ -825,6 +881,7 @@ def main():
     parser.add_argument("--search", "-s", metavar="QUERY", help="Search airports")
     parser.add_argument("--add-airport", "-a", action="store_true", help="Add a custom airport")
     parser.add_argument("--update-airports", action="store_true", help="Update airports database")
+    parser.add_argument("--no-emoji", action="store_true", help="Disable emoji in weather output")
     parser.add_argument("--setup", action="store_true", help="Create a default config.json")
     parser.add_argument("--help", "-h", action="store_true", help="Show help message")
 
@@ -871,6 +928,9 @@ Usage:
   ./weather.py --update-airports
       Update airports.json with current global airport data
 
+  ./weather.py --no-emoji
+      Disable emoji in weather output
+
   ./weather.py --setup
       Create a default config.json next to the executable
 """)
@@ -893,6 +953,7 @@ Usage:
                 debug=debug,
                 days=days,
                 temp_unit_override=temp_unit_override,
+                no_emoji=args.no_emoji,
             )
             return
         if args.add_favorite:
@@ -926,6 +987,7 @@ Usage:
                 debug=debug,
                 days=days,
                 temp_unit_override=temp_unit_override,
+                no_emoji=args.no_emoji,
             )
             return
 
