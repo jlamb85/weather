@@ -76,6 +76,7 @@ A command-line tool to get current weather and multi-day forecasts by airport co
 ## Releases
 - Use `./release.sh` to create a GitHub Release and upload binary assets only.
 - Source-code releases are disabled.
+- Use `./bump_version.sh [major|minor|patch]` to increment `VERSION` before a release.
 
 ## Dependencies
 - Python 3
