@@ -25,29 +25,25 @@ A command-line tool to get current weather and multi-day forecasts by airport co
 ./weather.py <AIRPORT_CODE> [--forecast|-f] [--days N] [--unit C|F] [--debug]
     Show weather for a specific airport (e.g. JFK, LAX)
 
-./weather.py --weather-favorites [--forecast|-f] [--days N] [--unit C|F] [--debug]
-./weather.py -wf [--forecast|-f] [--days N] [--unit C|F] [--debug]
+./weather.py --weather-favorites|-wf [--forecast|-f] [--days N] [--unit C|F] [--debug]
     Show weather for all favorite airports
 
-./weather.py --add-favorite <CODE>
-./weather.py -af <CODE>
+./weather.py --add-favorite|-af <CODE>
     Add an airport code to your favorites
 
-./weather.py --remove-favorite <CODE>
-./weather.py -rf <CODE>
+./weather.py --remove-favorite|-rf <CODE>
     Remove an airport code from your favorites
 
-./weather.py --list-favorites
-./weather.py -lf
+./weather.py --list-favorites|-lf
     List your favorite airports
 
-./weather.py --list-airports, -l
+./weather.py --list-airports|-l
     List all available airport codes
 
-./weather.py --search <query>, -s <query>
+./weather.py --search|-s <query>
     Search for airports by code, name, or city
 
-./weather.py --add-airport, -a
+./weather.py --add-airport|-a
     Add a custom airport to airports.json
 
 ./weather.py --update-airports
@@ -56,8 +52,7 @@ A command-line tool to get current weather and multi-day forecasts by airport co
 ./weather.py --no-emoji
     Disable emoji in weather output
 
-./weather.py --zone-forecast
-./weather.py -zf
+./weather.py --zone-forecast|-zf
     Show NWS zone forecast for location
 
 ./weather.py --searches
@@ -66,7 +61,7 @@ A command-line tool to get current weather and multi-day forecasts by airport co
 ./weather.py --setup
     Create a default config.json next to the executable
 
-./weather.py --help, -h
+./weather.py --help|-h
     Show help message
 ```
 
