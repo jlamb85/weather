@@ -1022,7 +1022,6 @@ def update_airports():
 def main():
     parser = argparse.ArgumentParser(
         description="Get current weather by airport code (ICAO/IATA).",
-        add_help=False,
     )
     parser.add_argument("airport_code", nargs="?", help="Airport code (e.g. JFK, LAX)")
     parser.add_argument("--forecast", "-f", action="store_true", help="Show multi-day forecast")
@@ -1039,67 +1038,11 @@ def main():
     parser.add_argument("--update-airports", action="store_true", help="Update airports database")
     parser.add_argument("--no-emoji", action="store_true", help="Disable emoji in weather output")
     parser.add_argument("--zone-forecast", "-zf", action="store_true", help="Show NWS zone forecast for location")
-    parser.add_argument("--searches", action="store_true", help="Update NWS searches cache for location")
     parser.add_argument("--setup", action="store_true", help="Create a default config.json")
-    parser.add_argument("--help", "-h", action="store_true", help="Show help message")
-
     args = parser.parse_args()
 
-    if args.help or len(sys.argv) < 2:
-        print("""
-weather.py: Get current weather by airport code (ICAO/IATA)
-
-Usage:
-  ./weather.py <AIRPORT_CODE> [--forecast|-f] [--days N] [--unit C|F] [--debug]
-      Show weather for a specific airport (code: e.g. JFK, LAX)
-      --forecast, -f   Show multi-day forecast
-      --days N         Number of days for forecast (default: 7, max: 16)
-      --unit C|F       Celsius or Fahrenheit (overrides config.json)
-      --debug          Show debug output
-
-  ./weather.py --weather-favorites|-wf [--forecast|-f] [--days N] [--unit C|F] [--debug]
-      Show weather for all favorite airports
-      --forecast, -f   Show multi-day forecast
-      --days N         Number of days for forecast (default: 7, max: 16)
-      --unit C|F       Celsius or Fahrenheit (overrides config.json)
-      --debug          Show debug output
-
-  ./weather.py --add-favorite|-af <CODE>
-      Add an airport code to your favorites
-
-  ./weather.py --remove-favorite|-rf <CODE>
-      Remove an airport code from your favorites
-
-  ./weather.py --list-favorites|-lf
-      List your favorite airports
-
-  ./weather.py --list-airports|-l
-      List all available airport codes
-
-  ./weather.py --search|-s <query>
-      Search for airports by code, name, or city
-
-  ./weather.py --add-airport|-a
-      Add a custom airport to airports.json
-
-  ./weather.py --update-airports
-      Update airports.json with current global airport data
-
-  ./weather.py --no-emoji
-      Disable emoji in weather output
-
-  ./weather.py --zone-forecast|-zf
-      Show NWS zone forecast for location
-
-  ./weather.py --searches
-      Update NWS searches cache for location
-
-  ./weather.py --setup
-      Create a default config.json next to the executable
-
-  ./weather.py --help|-h
-      Show help message
-""")
+    if len(sys.argv) < 2:
+        parser.print_help()
         return
 
     days = max(1, min(args.days, 16))

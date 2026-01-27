@@ -55,9 +55,6 @@ A command-line tool to get current weather and multi-day forecasts by airport co
 ./weather.py --zone-forecast|-zf
     Show NWS zone forecast for location
 
-./weather.py --searches
-    Update NWS searches cache for location (also happens automatically on weather lookups)
-
 ./weather.py --setup
     Create a default config.json next to the executable
 
