@@ -56,6 +56,7 @@ import argparse
 import json
 import os
 import sys
+from datetime import datetime
 
 try:
     import requests
@@ -76,8 +77,8 @@ except ImportError:
 # Config file support for default unit
 def get_app_dir():
     if getattr(sys, "frozen", False):
-        return os.path.dirname(sys.executable)
-    return os.path.dirname(__file__)
+        return os.path.abspath(os.path.dirname(sys.executable))
+    return os.path.abspath(os.path.dirname(__file__))
 
 
 def get_config_path():
@@ -605,6 +606,161 @@ def get_weather_by_airport(
     print("=" * 40 + "\n")
 
 
+def get_nws_zone_forecast(lat, lon, debug=False):
+    headers = {
+        "User-Agent": "weather-cli (https://github.com/jlamb85/weather)",
+        "Accept": "application/geo+json",
+    }
+    points_url = f"https://api.weather.gov/points/{lat},{lon}"
+    if debug:
+        print(f"DEBUG: NWS points URL: {points_url}")
+    try:
+        resp = requests.get(points_url, headers=headers, timeout=REQUEST_TIMEOUT)
+        if resp.status_code != 200:
+            return None, f"Error: NWS points lookup failed ({resp.status_code})"
+        data = resp.json()
+    except Exception as e:
+        return None, f"Error: NWS points lookup failed ({e})"
+
+    props = data.get("properties", {})
+    forecast_zone_url = props.get("forecastZone")
+    if not forecast_zone_url:
+        return None, "Error: NWS forecastZone not found for location."
+    zone_id = forecast_zone_url.rstrip("/").split("/")[-1]
+    zone_forecast_url = f"https://api.weather.gov/zones/forecast/{zone_id}/forecast"
+    if debug:
+        print(f"DEBUG: NWS zone forecast URL: {zone_forecast_url}")
+    try:
+        resp = requests.get(zone_forecast_url, headers=headers, timeout=REQUEST_TIMEOUT)
+        if resp.status_code != 200:
+            return None, f"Error: NWS zone forecast failed ({resp.status_code})"
+        zdata = resp.json()
+    except Exception as e:
+        return None, f"Error: NWS zone forecast failed ({e})"
+
+    return zdata, None
+
+
+def print_zone_forecast(airport_code, airport, debug=False):
+    lat = airport.get("lat", 0)
+    lon = airport.get("lon", 0)
+    zdata, err = get_nws_zone_forecast(lat, lon, debug=debug)
+    if err:
+        print(err)
+        return
+    props = zdata.get("properties", {})
+    zone_id = props.get("zoneId", "")
+    zone_name = props.get("name", "")
+    print("\n" + "=" * 40)
+    print(f"NWS Zone Forecast for {airport_code.upper()} - {zone_name or 'Zone'}")
+    if zone_id:
+        print(f"Zone: {zone_id}")
+    print("=" * 40)
+    periods = props.get("periods")
+    if isinstance(periods, list) and periods:
+        for p in periods:
+            name = p.get("name", "")
+            detailed = p.get("detailedForecast", "")
+            if name:
+                print(f"{name}: {detailed}")
+            else:
+                print(detailed)
+    else:
+        text = props.get("textDescription") or props.get("description") or ""
+        if text:
+            print(text)
+        else:
+            print("No zone forecast text available.")
+    print("=" * 40 + "\n")
+
+
+def update_searches_cache(airport_code, airport, debug=False):
+    headers = {
+        "User-Agent": "weather-cli (https://github.com/jlamb85/weather)",
+        "Accept": "application/geo+json",
+    }
+    lat = airport.get("lat", 0)
+    lon = airport.get("lon", 0)
+    points_url = f"https://api.weather.gov/points/{lat},{lon}"
+    if debug:
+        print(f"DEBUG: NWS points URL: {points_url}")
+    try:
+        resp = requests.get(points_url, headers=headers, timeout=REQUEST_TIMEOUT)
+        if resp.status_code != 200:
+            print(f"Error: NWS points lookup failed ({resp.status_code})")
+            return
+        data = resp.json()
+    except Exception as e:
+        print(f"Error: NWS points lookup failed ({e})")
+        return
+
+    props = data.get("properties", {})
+    forecast_zone_url = props.get("forecastZone", "")
+    county_url = props.get("county", "")
+    tz = props.get("timeZone", "")
+    if not forecast_zone_url or not county_url:
+        print("Error: NWS zone/county not found for location.")
+        return
+
+    zone_id = forecast_zone_url.rstrip("/").split("/")[-1]  # e.g., VAZ051
+    county_id = county_url.rstrip("/").split("/")[-1]       # e.g., VAC047
+    zone_state = zone_id[:2].lower()
+    county_state = county_id[:2].lower()
+    zone_id_l = zone_id.lower()
+    county_id_l = county_id.lower()
+
+    icao = (airport.get("icao_code") or "").upper()
+    gps = (airport.get("gps_code") or "").upper()
+    faa = (airport.get("faa_lid") or "").upper()
+    station = icao or gps or (f"K{faa}" if faa else "")
+    if not station:
+        print("Error: No station identifier found for METAR.")
+        return
+
+    lines = []
+    lines.append(f"[{airport_code.lower()}]")
+    now = datetime.now()
+    lines.append(f"searched = {now.timestamp()} ({now.isoformat(sep=' ')})")
+    lines.append(f"cached = {now.timestamp()} ({now.isoformat(sep=' ')})")
+    lines.append(f"coastal_flood_statement = https://tgftp.nws.noaa.gov/data/watches_warnings/flood/coastal/{zone_state}/{zone_id_l}.txt")
+    lines.append(f"flash_flood_statement = https://tgftp.nws.noaa.gov/data/watches_warnings/flash_flood/statement/{county_state}/{county_id_l}.txt")
+    lines.append(f"flash_flood_warning = https://tgftp.nws.noaa.gov/data/watches_warnings/flash_flood/warning/{county_state}/{county_id_l}.txt")
+    lines.append(f"flash_flood_watch = https://tgftp.nws.noaa.gov/data/watches_warnings/flash_flood/watch/{zone_state}/{zone_id_l}.txt")
+    lines.append(f"flood_warning = https://tgftp.nws.noaa.gov/data/watches_warnings/flood/warning/{county_state}/{county_id_l}.txt")
+    lines.append(f"metar = https://tgftp.nws.noaa.gov/data/observations/metar/decoded/{station}.TXT")
+    lines.append(f"severe_thunderstorm_warning = https://tgftp.nws.noaa.gov/data/watches_warnings/thunderstorm/{county_state}/{county_id_l}.txt")
+    lines.append(f"severe_weather_statement = https://tgftp.nws.noaa.gov/data/watches_warnings/severe_weather_stmt/{county_state}/{county_id_l}.txt")
+    lines.append(f"short_term_forecast = https://tgftp.nws.noaa.gov/data/forecasts/nowcast/{zone_state}/{zone_id_l}.txt")
+    lines.append(f"special_weather_statement = https://tgftp.nws.noaa.gov/data/watches_warnings/special_weather_stmt/{zone_state}/{zone_id_l}.txt")
+    lines.append(f"state_forecast = https://tgftp.nws.noaa.gov/data/forecasts/state/{zone_state}/{zone_id_l}.txt")
+    lines.append(f"tornado = https://tgftp.nws.noaa.gov/data/watches_warnings/tornado/{county_state}/{county_id_l}.txt")
+    if tz:
+        lines.append(f"tz = {tz}")
+    lines.append(f"urgent_weather_message = https://tgftp.nws.noaa.gov/data/watches_warnings/non_precip/{zone_state}/{zone_id_l}.txt")
+    lines.append(f"zone_forecast = https://tgftp.nws.noaa.gov/data/forecasts/zone/{zone_state}/{zone_id_l}.txt")
+
+    cache_path = os.path.join(get_app_dir(), "searches")
+    existing = ""
+    if os.path.exists(cache_path):
+        with open(cache_path, "r") as f:
+            existing = f.read()
+
+        if existing:
+            existing_lines = existing.splitlines()
+            if existing_lines and existing_lines[0].startswith("# based on data files from:"):
+                existing = "\n".join(existing_lines[1:])
+                if existing and not existing.endswith("\n"):
+                    existing += "\n"
+                with open(cache_path, "w") as f:
+                    f.write(existing)
+
+    with open(cache_path, "a") as f:
+        if existing and not existing.endswith("\n\n"):
+            f.write("\n" if existing.endswith("\n") else "\n\n")
+        f.write("\n".join(lines) + "\n")
+    print(f"Updated searches cache at {cache_path}")
+
+
 def add_custom_airport():
     print("Add a custom airport:")
     code = input("Airport code (3-4 letters): ").strip().upper()
@@ -882,6 +1038,8 @@ def main():
     parser.add_argument("--add-airport", "-a", action="store_true", help="Add a custom airport")
     parser.add_argument("--update-airports", action="store_true", help="Update airports database")
     parser.add_argument("--no-emoji", action="store_true", help="Disable emoji in weather output")
+    parser.add_argument("--zone-forecast", "-zf", action="store_true", help="Show NWS zone forecast for location")
+    parser.add_argument("--searches", action="store_true", help="Update NWS searches cache for location")
     parser.add_argument("--setup", action="store_true", help="Create a default config.json")
     parser.add_argument("--help", "-h", action="store_true", help="Show help message")
 
@@ -931,6 +1089,13 @@ Usage:
   ./weather.py --no-emoji
       Disable emoji in weather output
 
+  ./weather.py --zone-forecast
+  ./weather.py -zf
+      Show NWS zone forecast for location
+
+  ./weather.py --searches
+      Update NWS searches cache for location
+
   ./weather.py --setup
       Create a default config.json next to the executable
 """)
@@ -955,6 +1120,17 @@ Usage:
                 temp_unit_override=temp_unit_override,
                 no_emoji=args.no_emoji,
             )
+            airports = load_airports()
+            favorite_codes = sorted(load_favorites())
+            if args.zone_forecast:
+                for code in favorite_codes:
+                    airport = airports.get(code.upper())
+                    if airport:
+                        print_zone_forecast(code, airport, debug=debug)
+            for code in favorite_codes:
+                airport = airports.get(code.upper())
+                if airport:
+                    update_searches_cache(code, airport, debug=debug)
             return
         if args.add_favorite:
             add_favorite(args.add_favorite)
@@ -981,14 +1157,23 @@ Usage:
             add_custom_airport()
             return
         if args.airport_code:
+            airports = load_airports()
             get_weather_by_airport(
                 args.airport_code,
                 show_forecast=args.forecast,
                 debug=debug,
                 days=days,
                 temp_unit_override=temp_unit_override,
+                airports=airports,
                 no_emoji=args.no_emoji,
             )
+            if args.zone_forecast:
+                airport = airports.get(args.airport_code.upper())
+                if airport:
+                    print_zone_forecast(args.airport_code, airport, debug=debug)
+            airport = airports.get(args.airport_code.upper())
+            if airport:
+                update_searches_cache(args.airport_code, airport, debug=debug)
             return
 
         print("No command provided. Use --help for usage.")

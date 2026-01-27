@@ -7,5 +7,6 @@ weather_output.txt
 build/
 dist/
 favorites.json
+searches
 *.spec
 *.swp

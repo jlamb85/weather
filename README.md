@@ -56,6 +56,13 @@ A command-line tool to get current weather and multi-day forecasts by airport co
 ./weather.py --no-emoji
     Disable emoji in weather output
 
+./weather.py --zone-forecast
+./weather.py -zf
+    Show NWS zone forecast for location
+
+./weather.py --searches
+    Update NWS searches cache for location (also happens automatically on weather lookups)
+
 ./weather.py --setup
     Create a default config.json next to the executable
 
@@ -68,7 +75,7 @@ A command-line tool to get current weather and multi-day forecasts by airport co
 - Supports multiple weather providers (see config.json for details); currently Open-Meteo is used for live requests.
 - Use `--setup` to create a default `config.json` if one does not exist.
 ## Runtime files
-- The app reads and writes `config.json`, `favorites.json`, `airports.json`, and `weather_output.txt` from the same folder as the executable.
+- The app reads and writes `config.json`, `favorites.json`, `airports.json`, `weather_output.txt`, and `searches` from the same folder as the executable.
 - In development (running `python weather.py`), those files live next to `weather.py`.
 - In packaged builds (PyInstaller one-file or one-folder), place the JSON files beside the built executable to edit them.
 - `--setup` creates a default `config.json` automatically (no template file required).
