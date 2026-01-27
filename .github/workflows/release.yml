@@ -48,10 +48,14 @@ jobs:
         with:
           path: dist/
           merge-multiple: true
+      - name: Add default config to release bundle
+        run: cp config.default.json dist/config.default.json
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/weather-*
+          files: |
+            dist/weather-*
+            dist/config.default.json
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

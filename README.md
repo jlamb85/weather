@@ -68,6 +68,7 @@ A command-line tool to get current weather and multi-day forecasts by airport co
 - In development (running `python weather.py`), those files live next to `weather.py`.
 - In packaged builds (PyInstaller one-file or one-folder), place the JSON files beside the built executable to edit them.
 - `config.default.json` is shipped alongside the executable as a template for `--setup`.
+  - If you download a release asset, make sure `config.default.json` is in the same folder as the executable before running `--setup`.
 
 ## airports.json fields
 - `name`, `city`, `lat`, `lon`
