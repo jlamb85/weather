@@ -222,6 +222,9 @@ def load_airports():
                         "elevation_ft": entry.get("elevation_ft"),
                         "type": entry.get("type", ""),
                         "scheduled_service": entry.get("scheduled_service", ""),
+                        "local_code": entry.get("local_code", ""),
+                        "gps_code": entry.get("gps_code", ""),
+                        "faa_lid": entry.get("faa_lid", entry.get("local_code", "")),
                     }
                 elif isinstance(entry, (list, tuple)) and len(entry) >= 4:
                     airports[code_upper] = {
@@ -236,6 +239,9 @@ def load_airports():
                         "elevation_ft": None,
                         "type": "",
                         "scheduled_service": "",
+                        "local_code": "",
+                        "gps_code": "",
+                        "faa_lid": "",
                     }
             return airports
         except Exception as e:
@@ -261,6 +267,9 @@ def save_airports(airports):
                 "elevation_ft": entry.get("elevation_ft"),
                 "type": entry.get("type", ""),
                 "scheduled_service": entry.get("scheduled_service", ""),
+                "local_code": entry.get("local_code", ""),
+                "gps_code": entry.get("gps_code", ""),
+                "faa_lid": entry.get("faa_lid", entry.get("local_code", "")),
             }
         else:
             name, city, lat, lon = entry
@@ -276,6 +285,9 @@ def save_airports(airports):
                 "elevation_ft": None,
                 "type": "",
                 "scheduled_service": "",
+                "local_code": "",
+                "gps_code": "",
+                "faa_lid": "",
             }
     with open(path, 'w') as f:
         json.dump(data, f, indent=2)
@@ -362,6 +374,18 @@ def get_weather_by_airport(
     current = data.get("current_weather", {})
     print("\n" + "=" * 40)
     print(f"Weather for {airport_code.upper()} - {name} ({city})")
+    icao_code = airport.get("icao_code", "")
+    iata_code = airport.get("iata_code", "")
+    faa_lid = airport.get("faa_lid", "")
+    codes = []
+    if icao_code:
+        codes.append(f"ICAO {icao_code}")
+    if iata_code:
+        codes.append(f"IATA {iata_code}")
+    elif faa_lid:
+        codes.append(f"FAA {faa_lid}")
+    if codes:
+        print(f"Codes: {', '.join(codes)}")
     iso_region = airport.get("iso_region", "")
     iso_country = airport.get("iso_country", "")
     if iso_region or iso_country:
@@ -637,6 +661,9 @@ def update_airports():
             city = row.get('municipality', '').strip()
             iso_country = row.get('iso_country', '').strip()
             iso_region = row.get('iso_region', '').strip()
+            local_code = row.get('local_code', '').strip()
+            gps_code = row.get('gps_code', '').strip()
+            faa_lid = local_code
             elevation_ft = row.get('elevation_ft')
             airport_type = row.get('type', '').strip()
             scheduled_service = row.get('scheduled_service', '').strip()
@@ -647,7 +674,7 @@ def update_airports():
                 lon = float(lon)
             except (TypeError, ValueError):
                 continue
-            if not name or not city:
+            if not name:
                 continue
             try:
                 elevation_ft = int(float(elevation_ft)) if elevation_ft not in (None, "") else None
@@ -667,6 +694,9 @@ def update_airports():
                     "elevation_ft": elevation_ft,
                     "type": airport_type,
                     "scheduled_service": scheduled_service,
+                    "local_code": local_code,
+                    "gps_code": gps_code,
+                    "faa_lid": faa_lid,
                 }
             if iata and iata != icao:
                 airports[iata] = {
@@ -681,6 +711,43 @@ def update_airports():
                     "elevation_ft": elevation_ft,
                     "type": airport_type,
                     "scheduled_service": scheduled_service,
+                    "local_code": local_code,
+                    "gps_code": gps_code,
+                    "faa_lid": faa_lid,
+                }
+            if local_code and local_code not in (icao, iata):
+                airports[local_code] = {
+                    "name": name,
+                    "city": city,
+                    "lat": lat,
+                    "lon": lon,
+                    "icao_code": icao,
+                    "iata_code": iata,
+                    "iso_country": iso_country,
+                    "iso_region": iso_region,
+                    "elevation_ft": elevation_ft,
+                    "type": airport_type,
+                    "scheduled_service": scheduled_service,
+                    "local_code": local_code,
+                    "gps_code": gps_code,
+                    "faa_lid": faa_lid,
+                }
+            if gps_code and gps_code not in (icao, iata, local_code):
+                airports[gps_code] = {
+                    "name": name,
+                    "city": city,
+                    "lat": lat,
+                    "lon": lon,
+                    "icao_code": icao,
+                    "iata_code": iata,
+                    "iso_country": iso_country,
+                    "iso_region": iso_region,
+                    "elevation_ft": elevation_ft,
+                    "type": airport_type,
+                    "scheduled_service": scheduled_service,
+                    "local_code": local_code,
+                    "gps_code": gps_code,
+                    "faa_lid": faa_lid,
                 }
         save_airports(airports)
         print(f"Updated airports.json with {len(airports)} airports.")
@@ -719,7 +786,21 @@ def search_airports(query):
         iso_region = entry.get("iso_region", "")
         airport_type = entry.get("type", "")
         scheduled_service = entry.get("scheduled_service", "")
-        haystack = " ".join([code, name, city, iso_country, iso_region, airport_type, scheduled_service]).lower()
+        local_code = entry.get("local_code", "")
+        gps_code = entry.get("gps_code", "")
+        faa_lid = entry.get("faa_lid", "")
+        haystack = " ".join([
+            code,
+            name,
+            city,
+            iso_country,
+            iso_region,
+            airport_type,
+            scheduled_service,
+            local_code,
+            gps_code,
+            faa_lid,
+        ]).lower()
         if query in haystack:
             region_str = ", ".join([v for v in [iso_region, iso_country] if v])
             suffix = f" ({city})" if city else ""

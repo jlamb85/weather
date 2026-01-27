@@ -73,6 +73,7 @@ A command-line tool to get current weather and multi-day forecasts by airport co
 - `icao_code`, `iata_code`
 - `iso_country`, `iso_region`
 - `elevation_ft`, `type`, `scheduled_service`
+- `local_code`, `gps_code`, `faa_lid`
 
 ## Builds
 - Use `./build.sh` to build one-file and one-folder executables for your current OS.
