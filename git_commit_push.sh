@@ -4,6 +4,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
+EDIT=0
+if [[ "${1:-}" == "-e" || "${1:-}" == "--edit" ]]; then
+  EDIT=1
+fi
+
 if ! command -v git >/dev/null 2>&1; then
   echo "git not found in PATH." >&2
   exit 1
@@ -77,5 +82,9 @@ build_message() {
 COMMIT_MSG="$(build_message)"
 echo "Commit message: ${COMMIT_MSG}"
 
-git commit -m "$COMMIT_MSG"
+if [[ "$EDIT" -eq 1 ]]; then
+  git commit -e -m "$COMMIT_MSG"
+else
+  git commit -m "$COMMIT_MSG"
+fi
 git push
