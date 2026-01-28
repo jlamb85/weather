@@ -19,6 +19,7 @@ A command-line tool to get current weather and multi-day forecasts by airport co
 - All output is also written to `weather_output.txt` if debug is enabled
 - Request timeout protection (default: 10 seconds)
 - Supports multiple weather data providers (configurable; Open-Meteo is used for live data today)
+- Searches cache is reset on the first run of each day, with a notice printed when it resets
 
 ## Usage
 ```
@@ -71,6 +72,7 @@ A command-line tool to get current weather and multi-day forecasts by airport co
 - In development (running `python weather.py`), those files live next to `weather.py`.
 - In packaged builds (PyInstaller one-file or one-folder), place the JSON files beside the built executable to edit them.
 - `--setup` creates a default `config.json` automatically (no template file required).
+- VS Code opens `searches` as plain text via workspace settings to avoid Python linter errors.
 
 ## airports.json fields
 - `name`, `city`, `lat`, `lon`

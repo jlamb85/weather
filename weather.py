@@ -742,6 +742,15 @@ def update_searches_cache(airport_code, airport, debug=False):
     cache_path = os.path.join(get_app_dir(), "searches")
     existing = ""
     if os.path.exists(cache_path):
+        try:
+            mtime = os.path.getmtime(cache_path)
+            last_day = datetime.fromtimestamp(mtime).date()
+            today = datetime.now().date()
+            if last_day != today:
+                open(cache_path, "w").close()
+                print("Daily searches cache reset.")
+        except OSError:
+            pass
         with open(cache_path, "r") as f:
             existing = f.read()
 
