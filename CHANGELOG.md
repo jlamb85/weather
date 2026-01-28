@@ -2,7 +2,13 @@
 # Changelog
 
 ## [Unreleased]
-- (pending changes)
+- Searches cache now appends entries automatically on each weather lookup.
+- Added searched timestamp per cache entry and daily cache reset with notice.
+- Removed unused `--searches` CLI option; help now uses argparse defaults.
+- Normalized app directory paths for cleaner output.
+- Added `git_commit_push.sh` helper with optional editor flag.
+- Added `release_version.sh` helper requiring explicit bump argument.
+- Added VS Code workspace setting to open `searches` as plain text.
 
 ## 2026-01-26
 - Added support for `-wf` as a shorthand for `--weather-favorites`.

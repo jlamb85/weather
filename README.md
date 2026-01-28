@@ -20,6 +20,7 @@ A command-line tool to get current weather and multi-day forecasts by airport co
 - Request timeout protection (default: 10 seconds)
 - Supports multiple weather data providers (configurable; Open-Meteo is used for live data today)
 - Searches cache is reset on the first run of each day, with a notice printed when it resets
+- Searches cache is appended automatically on each weather lookup
 
 ## Usage
 ```
@@ -91,7 +92,11 @@ A command-line tool to get current weather and multi-day forecasts by airport co
 - Use `./bump_version.sh [major|minor|patch]` to increment `VERSION` before a release.
 - Use `./bump_version.sh --set X.Y.Z` to set a specific version.
 - Run `./bump_version.sh --help` to see usage.
+- Use `./release_version.sh <major|minor|patch>` to bump, commit, tag, and push in one step (argument required).
 - `VERSION` may include a leading `v` (e.g., `v0.1.0`).
+### Git helpers
+- Use `./git_commit_push.sh` to stage all changes, auto-generate a commit message, commit, and push.
+- Use `./git_commit_push.sh --edit` to open your editor before committing.
 ### GitHub Actions release (multi-OS)
 GitHub Actions builds macOS, Windows, and Linux binaries on tag pushes. To trigger a release:
 
