@@ -23,6 +23,10 @@ fi
 echo "Building for Linux x86_64..."
 pyinstaller --onefile --name ${NAME}-v${TAG}-linux-x86_64 $APP
 
+# Linux arm64 (requires running on arm64 host)
+echo "Building for Linux arm64..."
+pyinstaller --onefile --name ${NAME}-v${TAG}-linux-arm64 $APP
+
 # macOS (universal)
 echo "Building for macOS universal..."
 pyinstaller --onefile --name ${NAME}-v${TAG}-macos $APP

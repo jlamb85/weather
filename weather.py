@@ -1068,7 +1068,16 @@ def main():
     parser.add_argument("--no-emoji", action="store_true", help="Disable emoji in weather output")
     parser.add_argument("--zone-forecast", "-zf", action="store_true", help="Show NWS zone forecast for location")
     parser.add_argument("--setup", action="store_true", help="Create a default config.json")
+    parser.add_argument("--version", action="store_true", help="Show version and exit")
     args = parser.parse_args()
+
+    if args.version:
+        try:
+            with open(os.path.join(get_app_dir(), "VERSION"), "r") as f:
+                print(f.read().strip())
+        except Exception:
+            print("VERSION")
+        return
 
     if len(sys.argv) < 2:
         parser.print_help()
