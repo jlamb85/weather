@@ -10,3 +10,4 @@ favorites.json
 searches
 *.spec
 *.swp
+.venv
